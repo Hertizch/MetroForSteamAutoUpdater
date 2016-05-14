@@ -9,6 +9,9 @@ Please report any issues or bugs ;)
 - Does not overwrite your custom.styles, unless the updated package contains a newer version.
 
 # Changelog
+1.0.2:
+- Minor changes.
+
 1.0.1:
 - Handling for unexpected errors.
 - Does not overwrite your custom.styles, unless the updated package contains a newer version.
