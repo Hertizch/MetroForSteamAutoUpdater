@@ -92,8 +92,7 @@ namespace MetroForSteamAutoUpdater
         /// <returns></returns>
         private static async Task GetPackageDetails()
         {
-            string source;
-            Exception exception = null;
+            string source = null;
 
             // HTML source download client
             using (var webClient = new WebClient())
@@ -107,22 +106,17 @@ namespace MetroForSteamAutoUpdater
                 }
                 catch (Exception ex)
                 {
-                    exception = ex;
                     WriteErrorToConsole($"\nERROR: Failed to scrape metroforsteam.com - Error message: {ex.Message}");
-                    return;
-                }
-                finally
-                {
-                    if (exception == null)
-                        Console.Write("\rScraping of metroforsteam.com complete!\n");
+                    Console.WriteLine("Press any key to exit...");
+                    Console.ReadKey();
+                    Environment.Exit(1);
                 }
             }
 
             if (!string.IsNullOrWhiteSpace(source))
             {
                 // HTML source search pattern string
-                var match = Regex.Match(source,
-                    "<a class=\"button\" href=\"http://metroforsteam.com/downloads/(.*).zip\">Download</a>");
+                var match = Regex.Match(source, "<a href=\"http://metroforsteam.com/downloads/(.*).zip\" target=\"_blank\" class=\"download\"></a>");
 
                 // If source pattern found
                 if (match.Success)
@@ -131,7 +125,7 @@ namespace MetroForSteamAutoUpdater
                     Package.DownloadUrl = $"http://metroforsteam.com/downloads/{Package.Version}.zip";
                     Package.DownloadPath = Path.Combine(Path.GetTempPath(), Path.GetFileName(Package.DownloadUrl));
 
-                    Console.WriteLine("Data recieved:");
+                    Console.WriteLine("\nData recieved:");
                     Console.WriteLine($"Latest version: {Package.Version}");
                     Console.WriteLine($"Download url: {Package.DownloadUrl}");
                     Console.WriteLine($"Temporary download path: {Package.DownloadPath}");
@@ -139,12 +133,18 @@ namespace MetroForSteamAutoUpdater
                 }
                 else
                 {
-                    WriteErrorToConsole("ERROR: GetPackageDetails() - match.Success is false.");
+                    WriteErrorToConsole("\nERROR: GetPackageDetails() - match.Success is false.");
+                    Console.WriteLine("Press any key to exit...");
+                    Console.ReadKey();
+                    Environment.Exit(1);
                 }
             }
             else
             {
-                WriteErrorToConsole("ERROR: GetPackageDetails() - (string) source is null.");
+                WriteErrorToConsole("\nERROR: GetPackageDetails() - (string) source is null.");
+                Console.WriteLine("Press any key to exit...");
+                Console.ReadKey();
+                Environment.Exit(1);
             }
         }
 
@@ -161,12 +161,7 @@ namespace MetroForSteamAutoUpdater
             using (var webClient = new WebClient())
             {
                 webClient.Proxy = null;
-                webClient.DownloadProgressChanged += (sender, args) => Console.Write($"\rDownloading package - {args.ProgressPercentage}% ...");
-                webClient.DownloadFileCompleted += (sender, args) =>
-                {
-                    if (!args.Cancelled && args.Error == null)
-                        Console.Write("\rDownload of package complete!  ");
-                };
+                webClient.DownloadProgressChanged += (sender, args) => Console.Write($"\rDownloading package... ({args.ProgressPercentage}%)");
 
                 try
                 {
