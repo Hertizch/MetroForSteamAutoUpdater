@@ -1,12 +1,10 @@
 # Metro For Steam Auto-Updater
-Auto updates the Steam Metro skin by BoneyardBrew: http://metroforsteam.com/.
-Only tested on Windows 10 but should work on all versions, as long as you have .NET 4.5.2 or higher installed.
-Please report any issues or bugs ;)
+Automatically updates the Steam Metro skin by BoneyardBrew: http://metroforsteam.com/. Should work on all versions of Windows, as long as you have .NET 4.5.2 or higher installed. Please report any issues or bugs ;)
 
 ## Features
 - Downloads the latest version of the skin, and extracts it to your steam skins folder.
-- Automatically detects your steam install folder.
-- Does not overwrite your custom.styles, unless the updated package contains a newer version.
+- Automatically detects your steam install location.
+- Does not overwrite your custom.styles -- unless the updated package contains a newer version.
 
 ## Changelog
 
