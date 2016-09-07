@@ -2,7 +2,6 @@
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Ionic.Zip;
 using MetroForSteamAutoUpdater.Models;
@@ -20,6 +19,11 @@ namespace MetroForSteamAutoUpdater
 
             // Settings
             Console.Title = AppSetting.Name;
+
+            // Package details
+            Package.DownloadUrl = "http://metroforsteam.com/downloads/latest.zip";
+            Package.DownloadPath = Path.Combine(Path.GetTempPath(), Path.GetFileName(Package.DownloadUrl));
+            Package.ThemeName = "Metro for Steam";
 
             // Main
             Execute();
@@ -78,74 +82,9 @@ namespace MetroForSteamAutoUpdater
                 Environment.Exit(1);
             }
 
-            await GetPackageDetails();
-
             await GetPackage();
 
-            Console.WriteLine("Extracting package...");
             ExtractPackage();
-        }
-
-        /// <summary>
-        /// Gets the package details from metroforsteam.com source code.
-        /// </summary>
-        /// <returns></returns>
-        private static async Task GetPackageDetails()
-        {
-            string source = null;
-
-            // HTML source download client
-            using (var webClient = new WebClient())
-            {
-                webClient.Proxy = null;
-                webClient.DownloadProgressChanged += (sender, args) => Console.Write($"\rScraping metroforsteam.com... ({args.ProgressPercentage}%)");
-
-                try
-                {
-                    source = await webClient.DownloadStringTaskAsync("http://metroforsteam.com/");
-                }
-                catch (Exception ex)
-                {
-                    WriteErrorToConsole($"\nERROR: Failed to scrape metroforsteam.com - Error message: {ex.Message}");
-                    Console.WriteLine("Press any key to exit...");
-                    Console.ReadKey();
-                    Environment.Exit(1);
-                }
-            }
-
-            if (!string.IsNullOrWhiteSpace(source))
-            {
-                // HTML source search pattern string
-                var match = Regex.Match(source, "<a href=\"http://metroforsteam.com/downloads/(.*).zip\" target=\"_blank\" class=\"download\"></a>");
-
-                // If source pattern found
-                if (match.Success)
-                {
-                    Package.Version = match.Groups[1].Value;
-                    Package.DownloadUrl = $"http://metroforsteam.com/downloads/{Package.Version}.zip";
-                    Package.DownloadPath = Path.Combine(Path.GetTempPath(), Path.GetFileName(Package.DownloadUrl));
-
-                    Console.WriteLine("\nData recieved:");
-                    Console.WriteLine($"Latest version: {Package.Version}");
-                    Console.WriteLine($"Download url: {Package.DownloadUrl}");
-                    Console.WriteLine($"Temporary download path: {Package.DownloadPath}");
-                    Console.WriteLine($"Extract to: {Steam.SkinsPath}");
-                }
-                else
-                {
-                    WriteErrorToConsole("\nERROR: GetPackageDetails() - match.Success is false.");
-                    Console.WriteLine("Press any key to exit...");
-                    Console.ReadKey();
-                    Environment.Exit(1);
-                }
-            }
-            else
-            {
-                WriteErrorToConsole("\nERROR: GetPackageDetails() - (string) source is null.");
-                Console.WriteLine("Press any key to exit...");
-                Console.ReadKey();
-                Environment.Exit(1);
-            }
         }
 
         /// <summary>
@@ -201,6 +140,8 @@ namespace MetroForSteamAutoUpdater
                         Directory.CreateDirectory(Path.Combine(Steam.SkinsPath, Package.ThemeName));
                         Console.WriteLine($"Created directory: {Path.Combine(Steam.SkinsPath, Package.ThemeName)}");
                     }
+
+                    Console.WriteLine($"Extracting package to: {Path.Combine(Steam.SkinsPath, Package.ThemeName)}");
 
                     foreach (var entry in selection)
                     {
