@@ -11,7 +11,7 @@ namespace MetroForSteamAutoUpdater
 {
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
             // Events
             AppDomain.CurrentDomain.ProcessExit += (sender, eventArgs) => Cleanup();
@@ -143,8 +143,16 @@ namespace MetroForSteamAutoUpdater
 
                     Console.WriteLine($"Extracting package to: {Path.Combine(Steam.SkinsPath, Package.ThemeName)}");
 
-                    foreach (var entry in selection)
+                    var rootFolder = Path.GetDirectoryName(zip.Entries.First(x => x.FileName.Contains(Package.ThemeName)).FileName);
+
+                    foreach (var entry in selection.ToList())
                     {
+                        if (rootFolder != null)
+                        {
+                            var newName = entry.FileName.Replace(rootFolder, Package.ThemeName);
+                            entry.FileName = newName;
+                        }
+
                         // Do not overwrite custom.styles (if it exists) unless package contains newer version
                         if (entry.FileName.Contains("custom.styles") &&
                             File.Exists(Path.Combine(Steam.SkinsPath, entry.FileName)) &&
