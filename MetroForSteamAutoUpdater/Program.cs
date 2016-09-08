@@ -1,11 +1,20 @@
 ﻿using System;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Ionic.Zip;
+using MetroForSteamAutoUpdater.Helpers;
 using MetroForSteamAutoUpdater.Models;
-using Microsoft.Win32;
+using MetroForSteamAutoUpdater.Properties;
+using Octokit;
 
 namespace MetroForSteamAutoUpdater
 {
@@ -49,7 +58,7 @@ namespace MetroForSteamAutoUpdater
                 catch (Exception ex)
                 {
                     exception = ex;
-                    WriteErrorToConsole($"ERROR: Could not write error details to file: {AppSetting.LogFilename} - Error message: {ex.Message}");
+                    ConsoleHelper.WriteError($"ERROR: Could not write error details to file: {AppSetting.LogFilename} - Error message: {ex.Message}");
                 }
                 finally
                 {
@@ -58,7 +67,7 @@ namespace MetroForSteamAutoUpdater
                 }
             }
 
-            WriteErrorToConsole($"FATAL: Something went wrong! - Error details written to file: {AppSetting.LogFilename}");
+            ConsoleHelper.WriteError($"FATAL: Something went wrong! - Error details written to file: {AppSetting.LogFilename}");
             Console.WriteLine("Press any key to exit...");
             Console.ReadKey();
             Environment.Exit(1);
@@ -70,17 +79,19 @@ namespace MetroForSteamAutoUpdater
         private static async void Execute()
         {
             Console.Write("Attempting to find Steam skins path...");
-            Steam.SkinsPath = GetSteamSkinsPath();
+            Steam.SkinsPath = RegistryHelper.GetSteamSkinsPath();
 
             if (Directory.Exists(Steam.SkinsPath))
                 Console.Write($"\rFound Steam skins path at: {Steam.SkinsPath}\n");
             else
             {
-                WriteErrorToConsole($"ERROR: Steam skins path does not exist at {Steam.SkinsPath}\nPlease double-check your steam path!");
+                ConsoleHelper.WriteError($"ERROR: Steam skins path does not exist at {Steam.SkinsPath}\nPlease double-check your steam path!");
                 Console.WriteLine("Press any key to exit...");
                 Console.ReadKey();
                 Environment.Exit(1);
             }
+
+            await CheckForAppUpdate();
 
             await GetPackage();
 
@@ -108,7 +119,7 @@ namespace MetroForSteamAutoUpdater
                 }
                 catch (Exception ex)
                 {
-                    WriteErrorToConsole($"\nERROR: Failed to download package - Error message: {ex.Message}");
+                    ConsoleHelper.WriteError($"\nERROR: Failed to download package - Error message: {ex.Message}");
                 }
                 finally
                 {
@@ -178,7 +189,7 @@ namespace MetroForSteamAutoUpdater
             catch (Exception ex)
             {
                 exception = ex;
-                WriteErrorToConsole($"ERROR: Failed to extract package - Error message: {ex.Message}");
+                ConsoleHelper.WriteError($"ERROR: Failed to extract package - Error message: {ex.Message}");
             }
             finally
             {
@@ -196,22 +207,130 @@ namespace MetroForSteamAutoUpdater
             }
         }
 
-        /// <summary>
-        /// Gets the Steam skins path from the registry
-        /// </summary>
-        /// <returns></returns>
-        private static string GetSteamSkinsPath()
-        {
-            string path = null;
+        private static GitHubClient _gitHubClient;
 
-            using (var registryKey = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Valve\\Steam"))
+        private static async Task CheckForAppUpdate()
+        {
+            Console.WriteLine($"Communicating with GitHub to check if the application needs to be updated...");
+
+            _gitHubClient = new GitHubClient(new ProductHeaderValue("MetroForSteamAutoUpdater"))
             {
-                var value = registryKey?.GetValue("SteamPath");
-                if (value != null)
-                    path = Path.Combine(value.ToString().Replace(@"/", @"\"), "skins");
+                Credentials = new Credentials(Settings.Default.GitHubCredentials),
+            };
+
+            // Check rate limits
+            var rateLimits = await _gitHubClient.Miscellaneous.GetRateLimits();
+
+            // Gets the TimeSpan when the rate limit resets
+            var resetTime = DateTime.Parse(rateLimits.Resources.Core.Reset.ToString()) - DateTime.Now;
+
+            // If the rate limit has exceeded, return
+            if (rateLimits.Resources.Core.Remaining < 1)
+            {
+                Console.WriteLine($"Unable to check for application updates -- GitHub API request rate limit exceeded, will reset in {resetTime.Minutes} minutes");
+                return;
             }
 
-            return path;
+            // Get releases
+            var releases = await _gitHubClient.Repository.Release.GetAll("Hertizch", "MetroForSteamAutoUpdater");
+
+            // Get latest release
+            if (releases != null)
+            {
+                var latestRelease = releases.First();
+
+                // Get current version
+                var assembly = Assembly.GetExecutingAssembly();
+                var fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
+                var currentVersion = Version.Parse(fileVersionInfo.ProductVersion);
+
+                // Get latest version
+                Version latestVersion;
+                Version.TryParse(latestRelease.TagName.Replace("v", ""), out latestVersion);
+
+                // Compare version to determine if update is needed
+                if (latestVersion > currentVersion)
+                {
+                    Console.WriteLine($"A newer version ({latestVersion}) of the application has been found -- starting update...");
+
+                    var browserDownloadUrl = latestRelease.Assets.First().BrowserDownloadUrl;
+
+                    if (browserDownloadUrl != null)
+                        await DownloadAppPackage(browserDownloadUrl, latestVersion.ToString());
+
+                    if (browserDownloadUrl != null)
+                        RunUpdateScript(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Path.GetFileName(browserDownloadUrl)));
+                }
+                else
+                {
+                    Console.WriteLine($"No application updates found -- continuing...");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"No releases found");
+            }
+        }
+
+        private static async Task DownloadAppPackage(string browserDownloadUrl, string latestVersion)
+        {
+            // Create the webclient
+            var webClient = new WebClient
+            {
+                Proxy = null
+            };
+
+            // Add fake user agent (reqired by github api)
+            webClient.Headers.Add("user-agent", AppSetting.Name);
+
+            double progressPercentage;
+
+            // Progress changed event
+            webClient.DownloadProgressChanged += (sender, args) =>
+            {
+                progressPercentage = args.ProgressPercentage;
+
+                if (progressPercentage.ToString(CultureInfo.InvariantCulture).Contains("-") || Math.Abs(progressPercentage) < 0.001)
+                    progressPercentage = ((double)args.BytesReceived / args.TotalBytesToReceive) * 100;
+
+                Console.Write($"\rDownloading: {progressPercentage}% ({args.BytesReceived} bytes of {args.TotalBytesToReceive} bytes)");
+            };
+
+            // Download complete event
+            webClient.DownloadFileCompleted += (sender, args) =>
+            {
+                Console.WriteLine(args.Error == null
+                    ? $"\nDownload complete without error!"
+                    : $"\nDownload failed: {args.Error.Message}");
+            };
+
+            // Execute download
+            if (browserDownloadUrl != null)
+                await webClient.DownloadFileTaskAsync(browserDownloadUrl, $"{Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Path.GetFileName(browserDownloadUrl))}");
+        }
+
+        private static void RunUpdateScript(string newFilename)
+        {
+            var scriptFilename = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Path.GetFileName(Path.GetTempFileName() + ".bat"));
+
+            var sb = new StringBuilder();
+
+            sb.AppendLine("timeout /t 2 /nobreak");
+
+            if (AppSetting.Name != null)
+                sb.AppendLine($"del \"{Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AppSetting.Name + ".exe")}\"");
+
+            sb.AppendLine("timeout /t 2 /nobreak");
+            sb.AppendLine($"ren \"{newFilename}\" \"{AppSetting.Name + ".exe"}\"");
+            sb.AppendLine("timeout /t 2 /nobreak");
+            sb.AppendLine($"start \"\" \"{Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AppSetting.Name + ".exe")}\"");
+            sb.AppendLine("exit");
+
+            File.WriteAllText(scriptFilename, sb.ToString());
+
+            Process.Start(scriptFilename);
+
+            Environment.Exit(2);
         }
 
         /// <summary>
@@ -230,24 +349,13 @@ namespace MetroForSteamAutoUpdater
             catch (Exception ex)
             {
                 exception = ex;
-                WriteErrorToConsole($"ERROR: Failed to delete file: {Package.DownloadPath} - Error message: {ex.Message}");
+                ConsoleHelper.WriteError($"ERROR: Failed to delete file: {Package.DownloadPath} - Error message: {ex.Message}");
             }
             finally
             {
                 if (exception == null)
                     Console.WriteLine($"Deleted temporary file: {Package.DownloadPath}");
             }
-        }
-
-        /// <summary>
-        /// Write errors to console
-        /// </summary>
-        /// <param name="value">Value to write</param>
-        private static void WriteErrorToConsole(string value)
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"{value}");
-            Console.ResetColor();
         }
     }
 }
