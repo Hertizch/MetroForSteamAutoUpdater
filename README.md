@@ -8,6 +8,10 @@ Automatically updates the Steam Metro skin by BoneyardBrew: http://metroforsteam
 
 ## Changelog
 
+### 1.0.4:
+- Updated to work with the new metroforsteam website
+- Updated dependencies
+
 ### 1.0.3:
 - Fixed to work with the new metroforsteam.com website layout.
 
