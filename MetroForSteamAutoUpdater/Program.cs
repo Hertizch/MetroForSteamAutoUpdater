@@ -216,8 +216,6 @@ namespace MetroForSteamAutoUpdater
 
             var apiKey = ConfigurationManager.AppSettings["APIKey"];
 
-            Console.WriteLine($"Token: {apiKey}");
-
             _gitHubClient = new GitHubClient(new ProductHeaderValue("MetroForSteamAutoUpdater"))
             {
                 Credentials = new Credentials(apiKey),
