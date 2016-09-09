@@ -214,11 +214,9 @@ namespace MetroForSteamAutoUpdater
         {
             Console.WriteLine($"Communicating with GitHub to check if the application needs to be updated...");
 
-            var apiKey = ConfigurationManager.AppSettings["APIKey"];
-
             _gitHubClient = new GitHubClient(new ProductHeaderValue("MetroForSteamAutoUpdater"))
             {
-                Credentials = new Credentials(apiKey),
+                Credentials = Credentials.Anonymous
             };
 
             // Check rate limits
