@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Configuration;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -213,9 +214,11 @@ namespace MetroForSteamAutoUpdater
         {
             Console.WriteLine($"Communicating with GitHub to check if the application needs to be updated...");
 
+            var apiKey = ConfigurationManager.AppSettings["GitHubCredentials"];
+
             _gitHubClient = new GitHubClient(new ProductHeaderValue("MetroForSteamAutoUpdater"))
             {
-                Credentials = new Credentials(Settings.Default.GitHubCredentials),
+                Credentials = new Credentials(apiKey),
             };
 
             // Check rate limits

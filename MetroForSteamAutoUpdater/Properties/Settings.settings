@@ -1,9 +1,5 @@
 ﻿<?xml version='1.0' encoding='utf-8'?>
-<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="MetroForSteamAutoUpdater.Properties" GeneratedClassName="Settings">
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)">
   <Profiles />
-  <Settings>
-    <Setting Name="GitHubCredentials" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">32902eb567e6efb54a0198c86222cd4de4f9b479</Value>
-    </Setting>
-  </Settings>
+  <Settings />
 </SettingsFile>

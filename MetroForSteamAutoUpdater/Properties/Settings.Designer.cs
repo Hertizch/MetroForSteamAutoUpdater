@@ -22,14 +22,5 @@ namespace MetroForSteamAutoUpdater.Properties {
                 return defaultInstance;
             }
         }
-        
-        [global::System.Configuration.ApplicationScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("32902eb567e6efb54a0198c86222cd4de4f9b479")]
-        public string GitHubCredentials {
-            get {
-                return ((string)(this["GitHubCredentials"]));
-            }
-        }
     }
 }
