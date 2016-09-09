@@ -54,7 +54,7 @@ namespace MetroForSteamAutoUpdater
             {
                 try
                 {
-                    File.WriteAllText(AppSetting.LogFilename, e.ExceptionObject.ToString());
+                    File.AppendAllText(AppSetting.LogFilename, e.ExceptionObject.ToString());
                 }
                 catch (Exception ex)
                 {
@@ -214,7 +214,9 @@ namespace MetroForSteamAutoUpdater
         {
             Console.WriteLine($"Communicating with GitHub to check if the application needs to be updated...");
 
-            var apiKey = ConfigurationManager.AppSettings["GitHubCredentials"];
+            var apiKey = ConfigurationManager.AppSettings["APIKey"];
+
+            Console.WriteLine($"Token: {apiKey}");
 
             _gitHubClient = new GitHubClient(new ProductHeaderValue("MetroForSteamAutoUpdater"))
             {
