@@ -8,6 +8,12 @@ Automatically updates the Steam Metro skin by BoneyardBrew: http://metroforsteam
 
 ## Changelog
 
+### 1.0.9:
+- Removed self-updater until I can redo it
+
+### 1.0.8:
+- Yet again fixed to work with new website changes
+
 ### 1.0.7:
 - Changed GitHub authentication
 
