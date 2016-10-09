@@ -1,20 +1,16 @@
 ﻿using System;
-using System.Configuration;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Ionic.Zip;
 using MetroForSteamAutoUpdater.Helpers;
 using MetroForSteamAutoUpdater.Models;
-using MetroForSteamAutoUpdater.Properties;
 using Octokit;
 
 namespace MetroForSteamAutoUpdater
@@ -30,9 +26,6 @@ namespace MetroForSteamAutoUpdater
             // Settings
             Console.Title = AppSetting.Name;
 
-            // Package details
-            Package.DownloadUrl = "http://metroforsteam.com/downloads/latest.zip";
-            Package.DownloadPath = Path.Combine(Path.GetTempPath(), Path.GetFileName(Package.DownloadUrl));
             Package.ThemeName = "Metro for Steam";
 
             // Main
@@ -94,9 +87,39 @@ namespace MetroForSteamAutoUpdater
 
             await CheckForAppUpdate();
 
+            Package.DownloadUrl = await GetLatestVersion();
+            if (Package.DownloadUrl != null)
+                Package.DownloadPath = Path.Combine(Path.GetTempPath(), Path.GetFileName(Package.DownloadUrl));
+
             await GetPackage();
 
             ExtractPackage();
+        }
+
+        private static async Task<string> GetLatestVersion()
+        {
+            string output = null;
+            string source;
+
+            using (var webClient = new WebClient())
+            {
+                webClient.Proxy = null;
+
+                source = await webClient.DownloadStringTaskAsync("http://metroforsteam.com/");
+            }
+
+            if (source == null) return null;
+
+            var regex = Regex.Match(source, "<a href=\"downloads\\/(.*\\.zip)\" class=\"button\">Download<\\/a>");
+
+            if (regex.Success)
+            {
+                output = "http://metroforsteam.com/downloads/" + regex.Groups[1].Value;
+
+                Debug.WriteLine($"Found latest version: {regex.Groups[1].Value}");
+            }
+
+            return output;
         }
 
         /// <summary>
