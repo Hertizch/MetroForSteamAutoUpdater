@@ -275,15 +275,15 @@ namespace MetroForSteamAutoUpdater
                 // Compare version to determine if update is needed
                 if (latestVersion > currentVersion)
                 {
-                    Console.WriteLine($"A newer version ({latestVersion}) of the application has been found -- starting update...");
+                    Console.WriteLine($"A newer version ({latestVersion}) of the application has been found -- download it on GitHub!");
 
-                    var browserDownloadUrl = latestRelease.Assets.First().BrowserDownloadUrl;
+                    /*var browserDownloadUrl = latestRelease.Assets.First().BrowserDownloadUrl;
 
                     if (browserDownloadUrl != null)
                         await DownloadAppPackage(browserDownloadUrl, latestVersion.ToString());
 
                     if (browserDownloadUrl != null)
-                        RunUpdateScript(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Path.GetFileName(browserDownloadUrl)));
+                        RunUpdateScript(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Path.GetFileName(browserDownloadUrl)));*/
                 }
                 else
                 {
@@ -330,7 +330,7 @@ namespace MetroForSteamAutoUpdater
 
             // Execute download
             if (browserDownloadUrl != null)
-                await webClient.DownloadFileTaskAsync(browserDownloadUrl, $"{Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Path.GetFileName(browserDownloadUrl))}");
+                await webClient.DownloadFileTaskAsync(browserDownloadUrl, $"{Path.Combine(AppDomain.CurrentDomain.BaseDirectory, latestVersion + Path.GetFileName(browserDownloadUrl))}");
         }
 
         private static void RunUpdateScript(string newFilename)
