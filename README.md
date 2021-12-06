@@ -1,3 +1,5 @@
+##This project is dead and buried. Would not advice attempting to use it. 
+
 # Metro For Steam Auto-Updater
 Automatically updates the Steam Metro skin by BoneyardBrew: http://metroforsteam.com/. Should work on all versions of Windows, as long as you have .NET 4.5.2 or higher installed. Please report any issues or bugs ;)
 
